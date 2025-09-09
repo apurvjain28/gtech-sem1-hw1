@@ -260,13 +260,10 @@ class  TMDBAPIUtils:
         data = response.json()
 
         cast = data['cast']
+        if (start_date is not None) and (end_date is not None):
+            cast = [c for c in cast if c['release_date'] >= start_date and c['release_date'] <= end_date]
 
-
-
-
-
-
-        return NotImplemented
+        return cast
 
 
 #############################################################################################################################
@@ -376,7 +373,8 @@ if __name__ == "__main__":
     # graph = Graph()
     # graph.add_node(id='2975', name='Laurence Fishburne')
     tmdb_api_utils = TMDBAPIUtils(api_key='1915e395e0bf27b5c4b1d00d8c7c1173')
-    tmdb_api_utils.get_movie_cast('550', 3, exclude_ids=[819, 1283])
+    # tmdb_api_utils.get_movie_cast('550', 3, exclude_ids=[819, 1283])
+    tmdb_api_utils.get_movie_credits_for_person('287', '2024-01-01', '2025-12-31')
 
     # call functions or place code here to build graph (graph building code not graded)
     # Suggestion: code should contain steps outlined above in BUILD CO-ACTOR NETWORK
