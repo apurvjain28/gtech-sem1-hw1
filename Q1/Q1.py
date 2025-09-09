@@ -1,7 +1,7 @@
 import http.client
 import json
 import csv
-
+import requests
 
 #############################################################################################################################
 # cse6242 
@@ -216,12 +216,25 @@ class  TMDBAPIUtils:
                 Note that this is an example of the structure of the list and some of the fields returned by the API.
                 The result of the API call will include many more fields for each cast member.
         """
+        url = f"https://api.themoviedb.org/3/movie/{movie_id}/credits"
+        response = requests.get(url, params={"api_key": self.api_key})
+        data = response.json()
+
+        cast = data['cast']
+
+        if (limit is not None) and (len(cast) > limit):
+            cast = cast[:limit]
+
+        if (exclude_ids is not None) and (len(cast) > len(exclude_ids)):
+            cast
 
 
 
 
 
-        return NotImplemented
+        print(data)
+
+        return []
 
 
     def get_movie_credits_for_person(self, person_id: str, start_date: str = None, end_date: str = None) -> list:
@@ -352,15 +365,16 @@ def return_name()->str:
 
 if __name__ == "__main__":
 
-    graph = Graph()
-    graph.add_node(id='2975', name='Laurence Fishburne')
-    tmdb_api_utils = TMDBAPIUtils(api_key='<your API key>')
+    # graph = Graph()
+    # graph.add_node(id='2975', name='Laurence Fishburne')
+    tmdb_api_utils = TMDBAPIUtils(api_key='1915e395e0bf27b5c4b1d00d8c7c1173')
+    tmdb_api_utils.get_movie_cast('550', 3, exclude_ids=[819, 1283])
 
     # call functions or place code here to build graph (graph building code not graded)
     # Suggestion: code should contain steps outlined above in BUILD CO-ACTOR NETWORK
 
-    graph.write_edges_file()
-    graph.write_nodes_file()
+    # graph.write_edges_file()
+    # graph.write_nodes_file()
 
     # If you have already built & written out your graph, you could read in your nodes & edges files
     # to perform testing on your graph.
