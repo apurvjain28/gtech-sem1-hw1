@@ -225,16 +225,12 @@ class  TMDBAPIUtils:
         if (limit is not None) and (len(cast) > limit):
             cast = cast[:limit]
 
-        if (exclude_ids is not None) and (len(cast) > len(exclude_ids)):
-            cast
+        if (exclude_ids is not None):
+            cast = [c for c in cast if c["id"] not in exclude_ids]
 
+        print(cast)
 
-
-
-
-        print(data)
-
-        return []
+        return cast
 
 
     def get_movie_credits_for_person(self, person_id: str, start_date: str = None, end_date: str = None) -> list:
@@ -258,6 +254,18 @@ class  TMDBAPIUtils:
         IMPORTANT: You should format your dates like 'YYYY-MM-DD' e.g. '2024-01-29'.  You can assume the API will 
             format them in the same way. You can compare these as strings without doing any conversion.
         """
+
+        url = f"https://api.themoviedb.org/3/person/{person_id}/movie_credits"
+        response = requests.get(url, params={"api_key": self.api_key})
+        data = response.json()
+
+        cast = data['cast']
+
+
+
+
+
+
         return NotImplemented
 
 
@@ -357,7 +365,7 @@ def return_name()->str:
     e.g., gburdell3
     Do not return your 9 digit GTId
     """
-    return NotImplemented
+    return ajain968
 
 
 # You should modify __main__ as you see fit to build/test your graph using  the TMDBAPIUtils & Graph classes.
