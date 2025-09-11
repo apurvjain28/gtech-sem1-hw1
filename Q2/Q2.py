@@ -67,129 +67,263 @@ def execute_query_and_get_result(connection: Connection, query: str) -> Any:
 
 
 def GTusername() -> str:
-    gt_username = ""
+    gt_username = "ajain968"
     return gt_username
 
 
 def part_1_a_i() -> str:
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = "CREATE TABLE incidents(report_id TEXT, category TEXT, date TEXT);"
     ######################################################################
     return query
 
 
 def part_1_a_ii() -> str:
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = "CREATE TABLE details(report_id TEXT, subject TEXT, transport_mode TEXT,detection TEXT);"
     ######################################################################
     return query
 
 
 def part_1_a_iii() -> str:
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = "CREATE TABLE outcomes(report_id TEXT, outcome TEXT, num_ppl_fined INTEGER, fine REAL, num_ppl_arrested INTEGER, prison_time REAL, prison_time_unit TEXT);"
     ######################################################################
     return query
 
 
 def part_1_b_i(connection: Connection, path: str) -> None:
     ############### CREATE IMPORT CODE BELOW ############################
-    pass
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows = [
+            (
+                r.get("report_id", "").strip(),
+                r.get("category", "").strip(),
+                r.get("date", "").strip(),
+            )
+            for r in reader
+        ]
+    connection.executemany(
+        "INSERT INTO incidents(report_id, category, date) VALUES (?,?,?)",
+        rows,
+    )
+    connection.commit()
     ######################################################################
 
 
 def part_1_b_ii(connection: Connection, path: str) -> None:
     ############### CREATE IMPORT CODE BELOW ############################
-    pass
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows = [
+            (
+                r.get("report_id", "").strip(),
+                r.get("subject", "").strip(),
+                r.get("transport_mode", "").strip(),
+                r.get("detection", "").strip(),
+            )
+            for r in reader
+        ]
+    connection.executemany(
+        "INSERT INTO details(report_id, subject, transport_mode, detection) VALUES (?,?,?,?)",
+        rows,
+    )
+    connection.commit()
     ######################################################################
 
 
 def part_1_b_iii(connection: Connection, path: str) -> None:
     ############### CREATE IMPORT CODE BELOW ############################
-    pass
+    def to_int_or_none(x):
+        x = (x or "").strip()
+        return None if x == "" else int(x)
+
+    def to_float_or_none(x):
+        x = (x or "").strip()
+        return None if x == "" else float(x)
+
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows = []
+        for r in reader:
+            rows.append(
+                (
+                    r.get("report_id", "").strip(),
+                    r.get("outcome", "").strip(),
+                    to_int_or_none(r.get("num_ppl_fined")),
+                    to_float_or_none(r.get("fine")),
+                    to_int_or_none(r.get("num_ppl_arrested")),
+                    to_float_or_none(r.get("prison_time")),
+                    r.get("prison_time_unit", "").strip(),
+                )
+            )
+    connection.executemany(
+        """INSERT INTO outcomes(
+               report_id, outcome, num_ppl_fined, fine,
+               num_ppl_arrested, prison_time, prison_time_unit
+           ) VALUES (?,?,?,?,?,?,?)""",
+        rows,
+    )
+    connection.commit()
     ######################################################################
 
 
 def part_2_a() -> str:
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = "CREATE INDEX incident_index ON incidents(report_id);"
     ######################################################################
     return query
 
 
 def part_2_b() -> str:
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = "CREATE INDEX detail_index ON details(report_id);"
     ######################################################################
     return query
 
 
 def part_2_c() -> str:
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = "CREATE INDEX outcomes_index ON outcomes(report_id);"
     ######################################################################
     return query
 
 
 def part_3() -> str:
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = """
+    SELECT ROUND(
+        100.0 * SUM(CASE
+            WHEN date >= '2018-01-01' AND date <= '2020-12-31' THEN 1 ELSE 0
+        END) / COUNT(*), 2
+    )
+    FROM incidents;
+    """
     ######################################################################
     return query
 
 
 def part_4() -> str:
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = """
+    SELECT transport_mode, COUNT(*) AS count
+    FROM details
+    WHERE detection = 'Intelligence'
+      AND transport_mode IS NOT NULL
+      AND TRIM(transport_mode) <> ''
+    GROUP BY transport_mode
+    ORDER BY count DESC, transport_mode ASC
+    LIMIT 3;
+    """
     ######################################################################
     return query
 
 
 def part_5() -> str:
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = """
+    SELECT d.detection,
+           COUNT(*) AS count,
+           ROUND(AVG(o.num_ppl_arrested), 2) AS avg_ppl_arrested
+    FROM details d
+    INNER JOIN outcomes o ON d.report_id = o.report_id
+    WHERE o.num_ppl_arrested IS NOT NULL AND o.num_ppl_arrested > 0
+      AND d.detection IS NOT NULL AND TRIM(d.detection) <> ''
+    GROUP BY d.detection
+    HAVING COUNT(*) >= 100
+    ORDER BY avg_ppl_arrested DESC, d.detection ASC
+    LIMIT 3;
+    """
     ######################################################################
     return query
 
 
 def part_6() -> str:
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = """
+    SELECT i.category,
+           COUNT(*) AS count,
+           ROUND(AVG(
+                CASE
+                  WHEN LOWER(o.prison_time_unit) LIKE 'year%%'  THEN o.prison_time * 365.0
+                  WHEN LOWER(o.prison_time_unit) LIKE 'month%%' THEN o.prison_time * 30.0
+                  WHEN LOWER(o.prison_time_unit) LIKE 'week%%'  THEN o.prison_time * 7.0
+                  ELSE o.prison_time
+                END
+           ), 2) AS avg_prison_time_days
+    FROM incidents i
+    INNER JOIN outcomes o ON i.report_id = o.report_id
+    WHERE o.prison_time IS NOT NULL
+    GROUP BY i.category
+    HAVING COUNT(*) > 50
+    ORDER BY avg_prison_time_days DESC, i.category ASC;
+    """
     ######################################################################
     return query
 
 
 def part_7_a() -> str:
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = """
+    CREATE VIEW fines AS
+    SELECT i.report_id,
+           i.date,
+           o.num_ppl_fined,
+           o.fine
+    FROM incidents i
+    INNER JOIN outcomes o ON i.report_id = o.report_id
+    WHERE o.num_ppl_fined IS NOT NULL AND o.num_ppl_fined > 0;
+    """
     ######################################################################
     return query
 
 
 def part_7_b() -> str:
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = """
+    SELECT SUBSTR(date, 1, 4) AS year,
+           SUM(num_ppl_fined) AS total_ppl_fined,
+           ROUND(SUM(fine), 2) AS total_fine_amount
+    FROM fines
+    GROUP BY year
+    ORDER BY total_fine_amount DESC, year ASC
+    LIMIT 3;
+    """
     ######################################################################
     return query
 
 
 def part_8_a() -> str:
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = """
+    CREATE VIRTUAL TABLE incident_overviews USING fts5(
+        report_id,
+        subject
+    );
+    """
     ######################################################################
     return query
 
 
 def part_8_b() -> str:
     ############### EDIT SQL STATEMENT ############################
-    query = ""
+    query = """
+    INSERT INTO incident_overviews(report_id, subject)
+    SELECT report_id, subject
+    FROM details;
+    """
     ######################################################################
     return query
 
     
 def part_8_c():
     ############### EDIT SQL STATEMENT ###################################
-    query = ""
+    query = """
+    SELECT COUNT(*)
+    FROM incident_overviews
+    WHERE incident_overviews MATCH 'dead NEAR/3 pangolin';
+    """
     ######################################################################
     return query
 
