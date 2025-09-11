@@ -1,7 +1,6 @@
 import http.client
 import json
 import csv
-import requests
 
 #############################################################################################################################
 # cse6242 
@@ -61,12 +60,12 @@ class Graph:
         add a tuple (id, name) representing a node to self.nodes if it does not already exist
         The graph should not contain any duplicate nodes
         """
-        isNodeExists = False
+        isNodeExist = False
         for node in self.nodes:
             if node[0] == id:
-                isNodeExists = True
+                isNodeExist = True
                 break
-        if (isNodeExists):
+        if not isNodeExist:
             self.nodes.append((id, name))
         return
 
@@ -78,12 +77,12 @@ class Graph:
         Where 'source' is the id of the source node and 'target' is the id of the target node
         e.g., for two nodes with ids 'a' and 'b' respectively, add the tuple ('a', 'b') to self.edges
         """
-        isEdgeExists = False
+        isEdgeExist = False
         for edge in self.edges:
-            if source == edge[0] and target == edge[1]:
-                isEdgeExists = True
+            if source == edge[0] and target == edge[1] or source == edge[1] and target == edge[0]:
+                isEdgeExist = True
                 break
-        if (isEdgeExists):
+        if not isEdgeExist:
             self.edges.append((source, target))
         return
 
@@ -109,28 +108,16 @@ class Graph:
         e.g. {'a': 8}
         or {'a': 22, 'b': 22}
         """
-        nodesDict = {}
-        maxNumberofNode = 0
-        for edge in self.edges:
-            if edge[0] in nodesDict:
-                nodesDict[edge[0]] += 1
-                if nodesDict[edge[0]] >= maxNumberofNode:
-                    maxNumberofNode = edge[0]
-            else :
-                nodesDict[edge[0]] = 1
-            if  edge[1] in nodesDict:
-                nodesDict[edge[1]] += 1
-                if nodesDict[edge[1]] >= maxNumberofNode:
-                    maxNumberofNode = edge[1]
-            else :
-                nodesDict[edge[1]] = 1
+        degree_count = {}
+        maxDegree = 0
 
-        highestDegreeNodes = {};
-        for node in nodesDict:
-            if nodesDict[node] == maxNumberofNode:
-                highestDegreeNodes[node] = nodesDict[node]
+        for a, b in self.edges:
+            degree_count[a] = degree_count.get(a, 0) + 1
+            degree_count[b] = degree_count.get(b, 0) + 1
+            maxDegree = max(maxDegree, degree_count[a], degree_count[b])
 
-        return highestDegreeNodes
+        # collect all nodes that match max degree
+        return {node: deg for node, deg in degree_count.items() if deg == maxDegree}
 
     def print_nodes(self):
         """
@@ -191,6 +178,16 @@ class  TMDBAPIUtils:
     def __init__(self, api_key:str):
         self.api_key=api_key
 
+    def http_get_json(self, path: str):
+        conn = http.client.HTTPSConnection("api.themoviedb.org", timeout=20)
+        try:
+            conn.request("GET", path, headers={"Accept": "application/json"})
+            res = conn.getresponse()
+            body = res.read().decode("utf-8", errors="replace")
+
+            return json.loads(body)
+        finally:
+            conn.close()
 
     def get_movie_cast(self, movie_id:str, limit:int=None, exclude_ids:list[int]=None) -> list:
         """
@@ -216,19 +213,16 @@ class  TMDBAPIUtils:
                 Note that this is an example of the structure of the list and some of the fields returned by the API.
                 The result of the API call will include many more fields for each cast member.
         """
-        url = f"https://api.themoviedb.org/3/movie/{movie_id}/credits"
-        response = requests.get(url, params={"api_key": self.api_key})
-        data = response.json()
+        path = f"/3/movie/{movie_id}/credits?api_key={self.api_key}"
+        data = self.http_get_json(path)
 
-        cast = data['cast']
+        cast = data.get("cast", [])
 
         if (limit is not None) and (len(cast) > limit):
             cast = cast[:limit]
 
         if (exclude_ids is not None):
             cast = [c for c in cast if c["id"] not in exclude_ids]
-
-        print(cast)
 
         return cast
 
@@ -255,11 +249,10 @@ class  TMDBAPIUtils:
             format them in the same way. You can compare these as strings without doing any conversion.
         """
 
-        url = f"https://api.themoviedb.org/3/person/{person_id}/movie_credits"
-        response = requests.get(url, params={"api_key": self.api_key})
-        data = response.json()
+        path = f"/3/person/{person_id}/movie_credits?api_key={self.api_key}"
+        data = self.http_get_json(path)
 
-        cast = data['cast']
+        cast = data.get("cast", [])
         if (start_date is not None) and (end_date is not None):
             cast = [c for c in cast if c['release_date'] >= start_date and c['release_date'] <= end_date]
 
@@ -357,31 +350,48 @@ class  TMDBAPIUtils:
 
 
 def return_name()->str:
-    """
-    Return a string containing your GT Username
-    e.g., gburdell3
-    Do not return your 9 digit GTId
-    """
-    return ajain968
-
-
-# You should modify __main__ as you see fit to build/test your graph using  the TMDBAPIUtils & Graph classes.
-# Some boilerplate/sample code is provided for demonstration. We will not call __main__ during grading.
+    return 'ajain968'
 
 if __name__ == "__main__":
+    actorId='2975'
+    name='Laurence Fishburne'
+    YEAR_START = '1999-01-01'
+    YEAR_END = '1999-12-31'
 
-    # graph = Graph()
-    # graph.add_node(id='2975', name='Laurence Fishburne')
+    graph = Graph()
+    graph.add_node(actorId, name)
+
     tmdb_api_utils = TMDBAPIUtils(api_key='1915e395e0bf27b5c4b1d00d8c7c1173')
-    # tmdb_api_utils.get_movie_cast('550', 3, exclude_ids=[819, 1283])
-    tmdb_api_utils.get_movie_credits_for_person('287', '2024-01-01', '2025-12-31')
+    credits = tmdb_api_utils.get_movie_credits_for_person(actorId, YEAR_START, YEAR_END)
 
-    # call functions or place code here to build graph (graph building code not graded)
-    # Suggestion: code should contain steps outlined above in BUILD CO-ACTOR NETWORK
+    firstNode = []
+    for credit in credits:
+        movieId = credit['id']
+        cast = tmdb_api_utils.get_movie_cast(credit['id'], 5)
+        for coStar in cast:
+            graph.add_node(str(coStar['id']), coStar['name'])
+            firstNode.append([str(coStar['id']), coStar['name']])
+            graph.add_edge(str(actorId), str(coStar['id']))
 
-    # graph.write_edges_file()
-    # graph.write_nodes_file()
+    currNodes = firstNode
+    for _ in range(2):
+        newNodes = []
+        for node in currNodes:
+            credits = tmdb_api_utils.get_movie_credits_for_person(node[0], YEAR_START, YEAR_END)
+            for credit in credits:
+                movieId = credit['id']
+                cast = tmdb_api_utils.get_movie_cast(movieId, 5, exclude_ids=[int(node[0])])
+                for coStar in cast:
+                    coStarId = coStar['id']
+                    coStarName = coStar['name']
+                    graph.add_node(str(coStarId), coStarName)
+                    graph.add_edge(str(node[0]), str(coStarId))
+                    newNodes.append([str(coStarId), coStarName])
+        currNodes = newNodes
 
-    # If you have already built & written out your graph, you could read in your nodes & edges files
-    # to perform testing on your graph.
-    # graph = Graph(with_edges_file="edges.csv", with_nodes_file="nodes.csv")
+    graph.write_edges_file()
+    graph.write_nodes_file()
+
+    graph = Graph(with_edges_file="edges.csv", with_nodes_file="nodes.csv")
+    print("Nodes:", len(graph.nodes), "Edges:", len(graph.edges))
+    print("Max-degree nodes:", graph.max_degree_nodes())
